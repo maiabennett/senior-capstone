@@ -25,22 +25,37 @@ seurat.18 <- CreateSeuratObject(counts = counts.18$`Gene Expression`)
 
 # GSE 125527, IBD gut
 ## Read in the PBMC counts data from directory and append
-dir.12 <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/"
-files.12 <- list.files(path = dir.12, pattern = ".tsv.gz", full.names = TRUE)
-files.12.pbmc <- files.12[grep("pBMC",files.12)]
-counts.12 <- read.csv(files.12.pbmc[1],sep="\t", row.names=1)
-for(i in 2:length(files.12.pbmc)){
-  counts.12b <- read.csv(files.12.pbmc[i],sep="\t", row.names=1)
-  counts.12 <- rbind(counts.12, counts.12b)
+# GSE 125527, IBD gut
+## Set up variables
+dir.12.healthy <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/Healthy/"
+dir.12.UC <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UC/"
+files.12.pbmc.healthy <- list.files(path = dir.12.healthy, pattern = ".tsv.gz", full.names = TRUE)
+files.12.pbmc.UC <- list.files(path = dir.12.UC, pattern = ".tsv.gz", full.names = TRUE)
+
+### Read in and aggregate healthy control samples
+counts.12.healthy <- read.csv(files.12.pbmc.healthy[1],sep="\t", row.names=1)
+for(i in 2:length(files.12.pbmc.healthy)){
+  counts.12b.healthy <- read.csv(files.12.pbmc.healthy[i],sep="\t", row.names=1)
+  counts.12.healthy <- rbind(counts.12.healthy, counts.12b.healthy)
 }
-counts.12.pbmcs <- t(counts.12)
+counts.12.pbmc.healthy <- t(counts.12.healthy)
 
-## Read in the metadata
-metadata.12 <- read.csv("C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/GSE125527_cell_metadata.csv", row.names=1)
+### Make metadata for later analysis
+metadata.12.healthy <- data.frame(x1= colnames(counts.12.pbmc.healthy), x2 = "healthy")
+colnames(metadata.12.healthy) <- c("barcode", "condition")
 
-## SQL script used to narrow metadata.12 to PBMC samples only
-metadata12 <- as.data.frame(metadata.12)
-metadata.12.pbmcs <- sqldf("SELECT * FROM metadata12 WHERE tissue_assignment= 'PBMC'")
+### Read in and aggregate UC samples
+counts.12.UC <- read.csv(files.12.pbmc.UC[1],sep="\t", row.names=1)
+for(i in 2:length(files.12.pbmc.UC)){
+  counts.12b.UC <- read.csv(files.12.pbmc.UC[i],sep="\t", row.names=1)
+  counts.12.UC <- rbind(counts.12.UC, counts.12b.UC)
+}
+counts.12.pbmc.UC <- t(counts.12.UC)
 
-## Seurat object creation
-seurat.12 <- CreateSeuratObject(counts = counts.12.pbmcs, meta.data=metadata.12.pbmcs)
+### Make metadata for later analysis
+metadata.12.UC <- data.frame(x1= colnames(counts.12.pbmc.UC), x2 = "UC")
+colnames(metadata.12.UC) <- c("barcode", "condition")
+
+## Seurat objects creation
+seurat.12.healthy <- CreateSeuratObject(counts = counts.12.pbmc.healthy, metadata = metadata.12.healthy)
+seurat.12.UC <- CreateSeuratObject(counts = counts.12.pbmc.UC, metadata = metadata.12.UC)
