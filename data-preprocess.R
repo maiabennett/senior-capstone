@@ -32,7 +32,9 @@ seurat.15 <- JackStraw(seurat.15, num.replicate = 100)
 seurat.15 <- ScoreJackStraw(seurat.15, dims = 1:20)
 JackStrawPlot(seurat.15, dims = 1:15)
 
+## Save object for future recall
 saveRDS(seurat.15, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat15-preprocessed.rds")
+
 
 # GSE 185224, normal gut
 ## QC and valid cell selection
@@ -67,9 +69,49 @@ seurat.18 <- JackStraw(seurat.18, num.replicate = 100)
 seurat.18 <- ScoreJackStraw(seurat.18, dims = 1:20)
 JackStrawPlot(seurat.18, dims = 1:15)
 
+## Save object for future recall
 saveRDS(seurat.18, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat18-preprocessed.rds")
 
+
 # GSE 125527, IBD gut
+# Intestinal immune cells
+## QC and valid cell selection
+seurat.12.int[["percent.mt"]] <- PercentageFeatureSet(seurat.12.int, pattern = "^MT-")
+VlnPlot(seurat.12.int, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+seurat.15 <- subset(seurat.12.int, subset = nFeature_RNA > 200 & nFeature_RNA < 6000)
+
+## Normalization of data
+seurat.12.int <- NormalizeData(seurat.12.int)
+
+### Feature selection
+seurat.12.int <- FindVariableFeatures(seurat.12.int, selection.method = "vst", nfeatures = 2000)
+
+### Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(seurat.12.int), 10)
+
+### Plot variable features with and without labels
+print(plot1 <- VariableFeaturePlot(seurat.12.int))
+print(plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE))
+
+## Scaling of data
+all.genes <- rownames(seurat.12.int)
+seurat.12.int <- ScaleData(seurat.12.int, features = all.genes)
+
+## Perform linear dimension reduction
+seurat.12.int <- RunPCA(seurat.12.int, features = VariableFeatures(object = seurat.12.int))
+print(seurat.12.int[["pca"]], dims = 1:5, nfeatures = 5)
+DimPlot(seurat.12.int, reduction = "pca")
+DimHeatmap(seurat.12.int, dims = 1, cells = 500, balanced = TRUE)
+DimHeatmap(seurat.12.int, dims = 1:15, cells = 500, balanced = TRUE)
+seurat.12.int <- JackStraw(seurat.12.int, num.replicate = 100)
+seurat.12.int <- ScoreJackStraw(seurat.12.int, dims = 1:20)
+JackStrawPlot(seurat.12.int, dims = 1:15)
+
+## Save object for future recall
+saveRDS(seurat.12.int, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12int-preprocessed.rds")
+
+
+# PBMCs by condition
 seurat.12.healthy[["percent.mt"]] <- PercentageFeatureSet(seurat.12.healthy, pattern = "^MT-")
 VlnPlot(seurat.12.healthy, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 seurat.12.healthy <- subset(seurat.12.healthy, subset = nFeature_RNA > 200 & nFeature_RNA < 4000)
@@ -111,4 +153,5 @@ seurat.12 <- JackStraw(seurat.12, num.replicate = 100)
 seurat.12 <- ScoreJackStraw(seurat.12, dims = 1:20)
 JackStrawPlot(seurat.12, dims = 1:15)
 
+## Save object for future recall
 saveRDS(seurat.12, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-preprocessed.rds")
