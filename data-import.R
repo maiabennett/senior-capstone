@@ -24,11 +24,25 @@ counts.18 <- Read10X_h5("C:/Users/Me/OneDrive - University of Nebraska at Omaha/
 seurat.18 <- CreateSeuratObject(counts = counts.18$`Gene Expression`)
 
 # GSE 125527, IBD gut
-## Read in the PBMC counts data from directory and append
-# GSE 125527, IBD gut
+# Intestinal immune cells
+dir.12.int <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyI/"
+files.12.int <- list.files(path = dir.12.int, pattern = ".tsv.gz", full.names = TRUE)
+
+### Read in and aggregate  samples
+counts.12.int <- read.csv(files.12.int[1],sep="\t", row.names=1)
+for(i in 2:length(files.12.int)){
+  counts.12b.int <- read.csv(files.12.int[i],sep="\t", row.names=1)
+  counts.12.int <- rbind(counts.12.int, counts.12b.int)
+}
+counts.12.int <- t(counts.12.int)
+
+## Seurat objects creation
+seurat.12.int <- CreateSeuratObject(counts = counts.12.int)
+
+# PBMCs by condition
 ## Set up variables
-dir.12.healthy <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/Healthy/"
-dir.12.UC <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UC/"
+dir.12.healthy <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyPBMC/"
+dir.12.UC <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UCPBMC/"
 files.12.pbmc.healthy <- list.files(path = dir.12.healthy, pattern = ".tsv.gz", full.names = TRUE)
 files.12.pbmc.UC <- list.files(path = dir.12.UC, pattern = ".tsv.gz", full.names = TRUE)
 
