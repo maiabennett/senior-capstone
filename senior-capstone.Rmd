@@ -19,6 +19,8 @@ library(patchwork)
 library(pathfindR)
 library(sqldf)
 library(dplyr)
+library(ggplot2)
+library(cowplot)
 
 ```
 
@@ -26,7 +28,7 @@ The relevant files from indicated datasets (GSE150050, GSE185224, and GSE125527)
 
 GSE150050 contains scRNA-seq data of CD127+ cells (ILCs) from four tissue locations. This data is narrowed using SQL on metadata files to isolate colon samples and clustered ('Seurat clustering & ILC phenotype analysis'); ILC expression data is be extracted and subsequently used in the 'Metabolic pathway analysis' section. 
 
-```{r Importing datasets (GSE150050)}
+```{r Importing datasets (GSE 150050)}
 
 ## Read in the counts data
 counts.15 <- read.csv("C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE150050/STAR_raw_counts.csv", row.names=1)
@@ -49,7 +51,7 @@ seurat.15 <- CreateSeuratObject(counts = counts.15)
 
 GSE185224 contains primary scRNA-seq data from the small intestines and colon epithelium of three donors. This data is be clustered ('Seurat clustering & ILC phenotype analysis'); ILC expression data is extracted and subsequently used in the 'Metabolic pathway analysis' section.
 
-```{r Importing datasets (GSE185224)}
+```{r Importing datasets (GSE 185224)}
 
 ## Read in the counts data
 counts.18 <- Read10X_h5("C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE185224/GSE185224_Donor1_filtered_feature_bc_matrix.h5", use.names=TRUE)
@@ -61,9 +63,25 @@ seurat.18 <- CreateSeuratObject(counts = counts.18$`Gene Expression`)
 
 GSE125527 contains primary scRNA-seq data of immune cells taken from fifteen patients presenting with or without ulcerative colitis/IBD. This data is divided by condition, processed, and re-integrated; it is then clustered with condition factored into analysis ('Condition-based clustering and phenotype composition analysis'); ILC expression data is extracted and subsequently used in the 'Metabolic pathway analysis' section.
 
-```{r Importing datasets (GSE125527)}
+```{r Importing datasets (GSE 125527)}
 
-## Read in the PBMC counts data from directory and append
+## Intestinal immune cells counts data from directory and append
+dir.12.int <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyI/"
+files.12.int <- list.files(path = dir.12.int, pattern = ".tsv.gz", full.names = TRUE)
+
+### Read in and aggregate  samples
+counts.12.int <- read.csv(files.12.int[1],sep="\t", row.names=1)
+for(i in 2:length(files.12.int)){
+  counts.12b.int <- read.csv(files.12.int[i],sep="\t", row.names=1)
+  counts.12.int <- rbind(counts.12.int, counts.12b.int)
+}
+counts.12.int <- t(counts.12.int)
+
+## Seurat objects creation
+seurat.12.int <- CreateSeuratObject(counts = counts.12.int)
+
+
+## PBMC counts data from directory and append
 dir.12.healthy <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/Healthy/"
 dir.12.UC <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UC/"
 files.12.pbmc.healthy <- list.files(path = dir.12.healthy, pattern = ".tsv.gz", full.names = TRUE)
@@ -101,7 +119,7 @@ seurat.12.UC <- CreateSeuratObject(counts = counts.12.pbmc.UC, metadata = metada
 
 Then, the data pre-processed for further analysis. 
 
-```{r Converting datasets to Seurat objects (GSE150050)}
+```{r Converting datasets to Seurat objects (GSE 150050)}
 
 ## QC and valid cell selection
 seurat.15[["percent.mt"]] <- PercentageFeatureSet(seurat.15, pattern = "^MT-")
@@ -135,12 +153,13 @@ seurat.15 <- JackStraw(seurat.15, num.replicate = 100)
 seurat.15 <- ScoreJackStraw(seurat.15, dims = 1:20)
 JackStrawPlot(seurat.15, dims = 1:15)
 
+## Save object for future recall
 saveRDS(seurat.15, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat15-preprocessed.rds")
 
 ```
 
 
-```{r Converting datasets to Seurat objects (GSE185224)}
+```{r Converting datasets to Seurat objects (GSE 185224)}
 
 ## QC and valid cell selection
 seurat.18[["percent.mt"]] <- PercentageFeatureSet(seurat.18, pattern = "^MT-")
@@ -174,13 +193,52 @@ seurat.18 <- JackStraw(seurat.18, num.replicate = 100)
 seurat.18 <- ScoreJackStraw(seurat.18, dims = 1:20)
 JackStrawPlot(seurat.18, dims = 1:15)
 
+## Save object for future recall
 saveRDS(seurat.18, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat18-preprocessed.rds")
 
 ```
 
 
-```{r Converting datasets to Seurat objects (GSE125527)}
+```{r Converting datasets to Seurat objects (GSE 125527)}
 
+# Intestinal immune cells
+## QC and valid cell selection
+seurat.12.int[["percent.mt"]] <- PercentageFeatureSet(seurat.12.int, pattern = "^MT-")
+VlnPlot(seurat.12.int, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
+seurat.15 <- subset(seurat.12.int, subset = nFeature_RNA > 200 & nFeature_RNA < 6000)
+
+## Normalization of data
+seurat.12.int <- NormalizeData(seurat.12.int)
+
+### Feature selection
+seurat.12.int <- FindVariableFeatures(seurat.12.int, selection.method = "vst", nfeatures = 2000)
+
+### Identify the 10 most highly variable genes
+top10 <- head(VariableFeatures(seurat.12.int), 10)
+
+### Plot variable features with and without labels
+print(plot1 <- VariableFeaturePlot(seurat.12.int))
+print(plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE))
+
+## Scaling of data
+all.genes <- rownames(seurat.12.int)
+seurat.12.int <- ScaleData(seurat.12.int, features = all.genes)
+
+## Perform linear dimension reduction
+seurat.12.int <- RunPCA(seurat.12.int, features = VariableFeatures(object = seurat.12.int))
+print(seurat.12.int[["pca"]], dims = 1:5, nfeatures = 5)
+DimPlot(seurat.12.int, reduction = "pca")
+DimHeatmap(seurat.12.int, dims = 1, cells = 500, balanced = TRUE)
+DimHeatmap(seurat.12.int, dims = 1:15, cells = 500, balanced = TRUE)
+seurat.12.int <- JackStraw(seurat.12.int, num.replicate = 100)
+seurat.12.int <- ScoreJackStraw(seurat.12.int, dims = 1:20)
+JackStrawPlot(seurat.12.int, dims = 1:15)
+
+## Save object for future recall
+saveRDS(seurat.12.int, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12int-preprocessed.rds")
+
+
+# PBMCs by condition
 seurat.12.healthy[["percent.mt"]] <- PercentageFeatureSet(seurat.12.healthy, pattern = "^MT-")
 VlnPlot(seurat.12.healthy, features = c("nFeature_RNA", "nCount_RNA", "percent.mt"), ncol = 3)
 seurat.12.healthy <- subset(seurat.12.healthy, subset = nFeature_RNA > 200 & nFeature_RNA < 4000)
@@ -222,6 +280,7 @@ seurat.12 <- JackStraw(seurat.12, num.replicate = 100)
 seurat.12 <- ScoreJackStraw(seurat.12, dims = 1:20)
 JackStrawPlot(seurat.12, dims = 1:15)
 
+## Save object for future recall
 saveRDS(seurat.12, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-preprocessed.rds")
 
 ```
@@ -232,7 +291,7 @@ Clustering and phenotype composition analysis
 
 This section contains code for Seurat clustering & ILC phenotype assignment.
 
-```{r Initial clustering and cell type assignment (GSE150050)}
+```{r Initial clustering and cell type assignment (GSE 150050)}
 
 ## Cluster the cells
 seurat.15 <- FindNeighbors(seurat.15, dims = 1:10)
@@ -245,27 +304,32 @@ head(Idents(seurat.15), 5)
 seurat.15 <- RunUMAP(seurat.15, dims = 1:10)
 DimPlot(seurat.15, reduction = "umap", label = TRUE)
 
-## Finding differentially expressed features (cluster biomarkers)
-### Find markers that differentiate clusters from one another
+## Find markers that differentiate clusters from one another (to help assign identities)
 seurat.15.markers <- FindAllMarkers(seurat.15, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 manual.curate.15 <- seurat.15.markers %>%
   group_by(cluster) %>%
   slice_max(n = 3, order_by = avg_log2FC)
 write.table(manual.curate.15, file="manual.curate.15.txt", row.names=TRUE, col.names=TRUE)
 
-#### Find specific markers to identify immune cells, 
-#### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-, CD3-
-#### ILC2s: CD127/IL7R+, CD161/KLRB1+, CD294/PTGDR2+, GATA3+, CD3-
-#### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD3-
-#### NKs: CD56/NCAM1+,CD3-, EOMES+
-#### Ts: CD3/CD3D+ (definite)
+## Visualize specific markers to identify immune cells 
+### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-, CD3-
+### ILC2s: CD127/IL7R+, CD161/KLRB1+, CD294/PTGDR2+, GATA3+, CD3-
+### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD3-
+### NKs: CD56/NCAM1+,CD3-, EOMES+
+### Ts: CD3/CD3D+ (definite)
 FeaturePlot(seurat.15, features = c("CD3D", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3"), min.cutoff = "q9")
 
-## Assigning cell type identity to clusters
+## Assign cell type identity to clusters
 new.cluster.ids <- c("ILC3", "T cell", "ILC1", "ILC3", "Indeterminate", "Indeterminate", "Indeterminate ILC", "T cell", "T cell", "NK cell", "Indeterminate", "ILC2", "Indeterminate", "Indeterminate ILC")
 names(new.cluster.ids) <- levels(seurat.15)
 seurat.15 <- RenameIdents(seurat.15, new.cluster.ids)
 DimPlot(seurat.15, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+## Visualize specific markers by cluster
+Idents(seurat.15) <- factor(Idents(seurat.15), levels = c("ILC3", "T cell", "ILC1", "ILC3", "Indeterminate", "Indeterminate", "Indeterminate ILC", "T cell", "T cell", "NK cell", "Indeterminate", "ILC2", "Indeterminate", "Indeterminate ILC"))
+markers.to.plot <- c("CD3D", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3")
+DotPlot(seurat.15, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
 
 ## Subset to cells with determinate and non-T cell identities
 seurat.15.ilc <- subset(seurat.15, idents = c("ILC1", "ILC2", "ILC3", "NK cell", "Indeterminate ILC"))
@@ -274,30 +338,35 @@ seurat.15.ilc <- subset(seurat.15, idents = c("ILC1", "ILC2", "ILC3", "NK cell",
 seurat.15.ilc <- FindNeighbors(seurat.15.ilc, dims = 1:10)
 seurat.15.ilc <- FindClusters(seurat.15.ilc, resolution = 0.5)
 
-#### Run non-linear dimensional reduction (UMAP/tSNE)
+## Run non-linear dimensional reduction (UMAP/tSNE)
 seurat.15.ilc <- RunUMAP(seurat.15.ilc, dims = 1:10)
 DimPlot(seurat.15.ilc, reduction = "umap", label = TRUE)
 
-## Finding differentially expressed features (cluster biomarkers)
-### Find markers that differentiate clusters from one another
+## Find markers that differentiate clusters from one another (to help assign identities)
 seurat.15.ilc.markers <- FindAllMarkers(seurat.15.ilc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 manual.curate.15.ilc <- seurat.15.ilc.markers %>%
   group_by(cluster) %>%
   slice_max(n = 3, order_by = avg_log2FC)
 write.table(manual.curate.15.ilc, file="manual.curate.15.ilc.txt", row.names=TRUE, col.names=TRUE)
 
-# Find specific markers to identify cell types
-#### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-
-#### ILC2s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+-, CD294/PTGDR2+
-#### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD294/PTGDR-
-#### NKs: CD56/NCAM1+, EOMES+
+## Visualize specific markers to identify immune cell types
+### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-
+### ILC2s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+-, CD294/PTGDR2+
+### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD294/PTGDR-
+### NKs: CD56/NCAM1+, EOMES+
 FeaturePlot(seurat.15.ilc, features = c("NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3"), min.cutoff = "q9")
 
-## Assigning cell type identity to clusters
+## Assign cell type identity to clusters
 new.cluster.ids <- c("ILC3", "ILC3", "ILC1", "ILC3", "NK", "NK", "ILC2", "ILC2", "Indeterminate")
 names(new.cluster.ids) <- levels(seurat.15.ilc)
 seurat.15.ilc <- RenameIdents(seurat.15.ilc, new.cluster.ids)
 DimPlot(seurat.15.ilc, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+## Visualize specific markers by cell type
+Idents(seurat.15.ilc) <- factor(Idents(seurat.15.ilc), levels = c("ILC3", "ILC3", "ILC1", "ILC3", "NK", "NK", "ILC2", "ILC2", "Indeterminate"))
+markers.to.plot <- c("NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3")
+DotPlot(seurat.15.ilc, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
 
 ## Save objects for future recall
 saveRDS(seurat.15, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat15-clustered.rds")
@@ -306,7 +375,7 @@ saveRDS(seurat.15.ilc, file = "C:/Users/Me/OneDrive - University of Nebraska at 
 ```
 
 
-```{r Initial clustering and cell type assignment (GSE185224)}
+```{r Initial clustering and cell type assignment (GSE 185224)}
 
 ## Cluster the cells
 seurat.18 <- FindNeighbors(seurat.18, dims = 1:10)
@@ -319,48 +388,146 @@ head(Idents(seurat.18), 5)
 seurat.18 <- RunUMAP(seurat.18, dims = 1:10)
 DimPlot(seurat.18, reduction = "umap", label = TRUE)
 
-## Finding differentially expressed features (cluster biomarkers)
-### Find markers that differentiate clusters from one another
+## Find markers that differentiate clusters from one another (to help assign identities)
 seurat.18.markers <- FindAllMarkers(seurat.18, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 manual.curate.18 <- seurat.18.markers %>%
   group_by(cluster) %>%
   slice_max(n = 2, order_by = avg_log2FC)
 write.table(manual.curate.18, file="manual.curate.18.txt", row.names=TRUE, col.names=TRUE)
 
-### The Human Protein Atlas was used to assign identity to clusters
+## Assign cell type identity to clusters
 new.cluster.ids <- c("Distal enterocyte", "Indeterminate enterocyte", "Undifferentiated", "Proximal enterocyte", "Proximal enterocyte", "Paneth", "Undifferentiated", "Intestinal globlet", "Undifferentiated", "Distal enterocyte", "Immune", "Proximal enterocyte", "Indeterminate enterocyte", "Paneth", "Immune", "Paneth", "Enteroendocrine")
 names(new.cluster.ids) <- levels(seurat.18)
 seurat.18 <- RenameIdents(seurat.18, new.cluster.ids)
 DimPlot(seurat.18, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 
-### Subset is selected of clusters with immune identity
+## Subset clusters with immune identity
 seurat.18.immune <- subset(seurat.18, idents = "Immune")
 
-#### Cluster immune cell subset
+## Cluster immune cell subset
 seurat.18.immune <- FindNeighbors(seurat.18.immune, dims = 1:10)
 seurat.18.immune <- FindClusters(seurat.18.immune, resolution = 0.5)
 
-#### Look at cluster IDs of the first 5 cells
+### Look at cluster IDs of the first 5 cells
 head(Idents(seurat.18.immune), 5)
 
-#### Run non-linear dimensional reduction (UMAP/tSNE)
+## Run non-linear dimensional reduction (UMAP/tSNE)
 seurat.18.immune <- RunUMAP(seurat.18.immune, dims = 1:10)
 DimPlot(seurat.18.immune, reduction = "umap", label = TRUE)
 
-### Find differentially expressed features (cluster biomarkers)
-#### Find markers that differentiate clusters from one another
+## Find markers that differentiate clusters from one another (to help assign identities)
 seurat.18.immune.markers <- FindAllMarkers(seurat.18.immune, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
 manual.curate.18.immune <- seurat.18.immune.markers %>%
   group_by(cluster) %>%
   slice_max(n = 2, order_by = avg_log2FC)
 write.table(manual.curate.18.immune, file="manual.curate.18.immune.txt", row.names=TRUE, col.names=TRUE)
 
-#### Find specific markers to identify immune cells from a predominant epithelial population
-#### ILCs (CD127/IL7R+, CD117/KIT +, CD161/KLRB1+); no distinct signatures found
+## Visualize specific markers to identify immune cells from a predominant epithelial population
+## ILCs (CD127/IL7R+, CD117/KIT +, CD161/KLRB1+); no distinct signatures found
 FeaturePlot(seurat.18.immune, features = c("CD4", "CD8A", "IL7R", "PTGDR2", "KIT", "CD14", "CD19", "KLRB1"), min.cutoff = "q9")
 
+new.cluster.ids <- c("")
+names(new.cluster.ids) <- levels(seurat.18.immune)
+seurat.18 <- RenameIdents(seurat.18, new.cluster.ids)
+DimPlot(seurat.18.immune, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+## Plot specific markers
+Idents(seurat.18.immune) <- factor(Idents(seurat.18.immune), levels = c(""))
+markers.to.plot <- c("CD4", "CD8A", "IL7R", "PTGDR2", "KIT", "CD14", "CD19", "KLRB1")
+DotPlot(seurat.18.immune, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
+
+# Save objects for future recall
 saveRDS(seurat.18, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat18-clustered.rds")
 saveRDS(seurat.18.immune, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat18immune-clustered.rds")
+
+```
+
+This section contains code for the intestinal immune cell samples from GSE125527. This code is modeled on other samples from the same dataset; however, it has not been tested yet.
+
+```{r Initial clustering and cell type assignment (GSE 125527)}
+
+# Intestinal immune cells
+## Cluster the cells
+seurat.12.int <- FindNeighbors(seurat.12.int, dims = 1:10)
+seurat.12.int <- FindClusters(seurat.12.int, resolution = 0.5)
+
+### Look at cluster IDs of the first 5 cells
+head(Idents(seurat.12.int), 5)
+
+## Run non-linear dimensional reduction (UMAP/tSNE)
+seurat.12.int <- RunUMAP(seurat.12.int, dims = 1:10)
+DimPlot(seurat.12.int, reduction = "umap", label = TRUE)
+
+## Find markers that differentiate clusters from one another (to help assign identities)
+seurat.12.int.markers <- FindAllMarkers(seurat.12.int, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+manual.curate.12.int <- seurat.12.int.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 3, order_by = avg_log2FC)
+write.table(manual.curate.12.int, file="manual.curate.12.int.txt", row.names=TRUE, col.names=TRUE)
+
+## Visualize specific markers to identify immune cells 
+### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-, CD3-
+### ILC2s: CD127/IL7R+, CD161/KLRB1+, CD294/PTGDR2+, GATA3+, CD3-
+### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD3-
+### NKs: CD56/NCAM1+,CD3-, EOMES+
+### Ts: CD3/CD3D+ (definite)
+### Bs: 
+### Myeloids: 
+FeaturePlot(seurat.12.int, features = c("CD3D", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3"), min.cutoff = "q9")
+
+## Assign cell type identity to clusters
+new.cluster.ids <- c("")
+names(new.cluster.ids) <- levels(seurat.12.int)
+seurat.12.int <- RenameIdents(seurat.12.int, new.cluster.ids)
+DimPlot(seurat.12.int, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+## Visualize specific markers by cluster
+Idents(seurat.12.int) <- factor(Idents(seurat.12.int), levels = c(""))
+markers.to.plot <- c("")
+DotPlot(seurat.12.int, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
+
+## Subset to cells with determinate and non-T cell identities
+seurat.12.int.ilc <- subset(seurat.12.int, idents = c(""))
+
+## Cluster subset
+seurat.12.int.ilc <- FindNeighbors(seurat.12.int.ilc, dims = 1:10)
+seurat.12.int.ilc <- FindClusters(seurat.12.int.ilc, resolution = 0.5)
+
+## Run non-linear dimensional reduction (UMAP/tSNE)
+seurat.12.int.ilc <- RunUMAP(seurat.12.int.ilc, dims = 1:10)
+DimPlot(seurat.12.int.ilc, reduction = "umap", label = TRUE)
+
+## Find markers that differentiate clusters from one another (to help assign identities)
+seurat.12.int.ilc.markers <- FindAllMarkers(seurat.12.int.ilc, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+manual.curate.12.int.ilc <- seurat.12.int.ilc.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 3, order_by = avg_log2FC)
+write.table(manual.curate.12.int.ilc, file="manual.curate.12.int.ilc.txt", row.names=TRUE, col.names=TRUE)
+
+## Visualize specific markers to identify immune cell types
+### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-
+### ILC2s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+-, CD294/PTGDR2+
+### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD294/PTGDR-
+### NKs: CD56/NCAM1+, EOMES+
+FeaturePlot(seurat.12.int.ilc, features = c("NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3"), min.cutoff = "q9")
+
+## Assign cell type identity to clusters
+new.cluster.ids <- c("")
+names(new.cluster.ids) <- levels(seurat.12.int.ilc)
+seurat.12.int.ilc <- RenameIdents(seurat.12.int.ilc, new.cluster.ids)
+DimPlot(seurat.12.int.ilc, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+## Visualize specific markers by cell type
+Idents(seurat.12.int.ilc) <- factor(Idents(seurat.12.int.ilc), levels = c(""))
+markers.to.plot <- c("NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3")
+DotPlot(seurat.12.int.ilc, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
+
+## Save objects for future recall
+saveRDS(seurat.12.int, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12int-clustered.rds")
+saveRDS(seurat.12.int.ilc, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12intilc-clustered.rds")
 
 ```
 
@@ -376,7 +543,7 @@ Condition-based clustering and phenotype composition analysis
 
 This section contains code for the integrated analysis of GSE125527 by condition (healthy or UC). 
 
-```{r Integrated clustering and cell type assignment (GSE125527)}
+```{r Integrated clustering and cell type assignment (GSE 125527)}
 
 ## Cluster the cells
 seurat.12 <- FindNeighbors(seurat.12, dims = 1:10)
@@ -388,7 +555,47 @@ head(Idents(seurat.12), 5)
 ## Run non-linear dimensional reduction (UMAP/tSNE)
 seurat.12 <- RunUMAP(seurat.12, dims = 1:10)
 DimPlot(seurat.12, reduction = "umap", label = TRUE)
-p1 <- DimPlot(immune.combined, reduction = "umap", group.by = "condition")
+p1 <- DimPlot(seurat.12, reduction = "umap", group.by = "condition")
+
+## Find markers that differentiate clusters from one another (to help assign identities)
+DefaultAssay(seurat.12) <- "RNA"
+seurat.12.markers <- FindAllMarkers(seurat.12, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+manual.curate.12 <- seurat.12.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 2, order_by = avg_log2FC)
+write.table(manual.curate.12, file="manual.curate.12.txt", row.names=TRUE, col.names=TRUE)
+
+## Visualize specific markers to identify cell types
+### ILC1s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT-, CD294/PTGDR2-
+## ILC2s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+-, CD294/PTGDR2+
+### ILC3s: CD127/IL7R+, CD161/KLRB1+, CD117/KIT+, CD294/PTGDR-
+### NKs: CD56/NCAM1+, EOMES+
+### Ts: CD3/CD3D+ (definite)
+FeaturePlot(seurat.12, features = c("CD3A", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3"), min.cutoff = "q9")
+
+## Assign identity to clusters
+new.cluster.ids <- c("")
+names(new.cluster.ids) <- levels(seurat.12)
+seurat.12 <- RenameIdents(seurat.12, new.cluster.ids)
+DimPlot(seurat.12, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
+
+## Visualize specific markers by condition and cell type
+Idents(seurat.12) <- factor(Idents(seurat.12), levels = c(""))
+markers.to.plot <- c("CD3A", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3")
+DotPlot(seurat.12, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "stim") +
+  RotatedAxis()
+
+## Visualize specific genes in cowplot format by condition and cell type
+theme_set(theme_cowplot())
+ilcs <- subset(seurat.12, idents = c("ILC1", "ILC2", "ILC3"))
+Idents(ilcs) <- "condition"
+avg.ilcs <- as.data.frame(log1p(AverageExpression(ilcs, verbose = FALSE)$RNA))
+avg.ilcs$gene <- rownames(avg.ilcs)
+
+genes.to.label = c("") # Add metabolic-related genes?
+p9 <- ggplot(avg.ilcs, aes(healthy, UC)) + geom_point() + ggtitle("ILCs")
+p9 <- LabelPoints(plot = p9, points = genes.to.label, repel = TRUE)
+print(p1)
 
 ```
 
@@ -398,32 +605,151 @@ Metabolic pathway analysis
 
 This section contains code for the KEGG metabolic pathway analysis sub-section. 
 
-```{r Querying against KEGG}
+```{r Extract differential expression matrices}
 
-# See 'pathfindR' for KEGG analysis
+# GSE 150050
+## All-cluster matrix
+im.15.markers <- FindAllMarkers(seurat.15, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+manual.curate.15 <- seurat.15.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 10, order_by = avg_log2FC)
+im.15.markers <- im.15.markers %>% select(p_val, avg_log2FC)
+im.15.markers <- rownames_to_column(im.15.markers, "gene_id")
 
-# Get differentially expressed genes of ILCs by dataset (dataframe gene, LFC, p-value)
+## Individual cluster matrices
+im.cluster0.markers <- FindMarkers(seurat.15.int, ident.1 = 2, min.pct = 0.25)
+im.cluster0.markers <- im.cluster0.markers %>% select(p_val, avg_log2FC)
+im.cluster0.markers <- rownames_to_column(im.cluster0.markers, "gene_id")
 
-# GSE 150050, four tissues
+### ILC versus other clusters matrix
+im.ilc.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = c("ILC1", "ILC2", "ILC3"), min.pct = 0.25)
+im.ilc.markers <- im.ilc.markers %>% select(p_val, avg_log2FC)
+im.ilc.markers <- rownames_to_column(im.ilc.markers, "gene_id")
 
-# GSE 185224, normal gut
+### ILC subsets versus each other matrices
+im.ilc1.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC1", min.pct = 0.25)
+im.ilc1.markers <- im.ilc1.markers %>% select(p_val, avg_log2FC)
+im.ilc1.markers <- rownames_to_column(im.ilc1.markers, "gene_id")
 
-# GSE 125527, IBD gut
+im.ilc2.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC2", min.pct = 0.25)
+im.ilc2.markers <- im.ilc2.markers %>% select(p_val, avg_log2FC)
+im.ilc2.markers <- rownames_to_column(im.ilc2.markers, "gene_id")
 
-#
+im.ilc3.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC3", min.pct = 0.25)
+im.ilc3.markers <- im.ilc3.markers %>% select(p_val, avg_log2FC)
+im.ilc3.markers <- rownames_to_column(im.ilc3.markers, "gene_id")
+
+# GSE 125527 
+## Intestinal immune cells
+## All-cluster matrix
+int.12.markers <- FindAllMarkers(seurat.12.int, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+manual.curate.12.int <- seurat.12.int.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 10, order_by = avg_log2FC)
+int.12.markers <- int.12.markers %>% select(p_val, avg_log2FC)
+int.12.markers <- rownames_to_column(int.12.markers, "gene_id")
+
+## Individual cluster matrices
+int.cluster0.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = 2, min.pct = 0.25)
+int.cluster0.markers <- int.cluster0.markers %>% select(p_val, avg_log2FC)
+int.cluster0.markers <- rownames_to_column(int.cluster0.markers, "gene_id")
+
+### ILC versus other clusters matrix
+int.ilc.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = c("ILC1", "ILC2", "ILC3"), min.pct = 0.25)
+int.ilc.markers <- int.ilc.markers %>% select(p_val, avg_log2FC)
+int.ilc.markers <- rownames_to_column(int.ilc.markers, "gene_id")
+
+### ILC subsets versus each other matrices
+int.ilc1.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC1", min.pct = 0.25)
+int.ilc1.markers <- int.ilc1.markers %>% select(p_val, avg_log2FC)
+int.ilc1.markers <- rownames_to_column(int.ilc1.markers, "gene_id")
+
+int.ilc2.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC2", min.pct = 0.25)
+int.ilc2.markers <- int.ilc2.markers %>% select(p_val, avg_log2FC)
+int.ilc2.markers <- rownames_to_column(int.ilc2.markers, "gene_id")
+
+int.ilc3.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC3", min.pct = 0.25)
+int.ilc3.markers <- int.ilc3.markers %>% select(p_val, avg_log2FC)
+int.ilc3.markers <- rownames_to_column(int.ilc3.markers, "gene_id")
+
+
+# PBMCs
+## All-cluster matrix
+pbmc.12.markers <- FindAllMarkers(seurat.12, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
+manual.curate.12 <- seurat.12.markers %>%
+  group_by(cluster) %>%
+  slice_max(n = 10, order_by = avg_log2FC)
+pbmc.12.markers <- pbmc.12.markers %>% select(p_val, avg_log2FC)
+pbmc.12.markers <- rownames_to_column(pbmc.12.markers, "gene_id")
+
+## Individual cluster 
+cluster0.markers <- FindMarkers(seurat.12, ident.1 = 2, min.pct = 0.25)
+cluster0.markers <- cluster0.markers %>% select(p_val, avg_log2FC)
+cluster0.markers <- rownames_to_column(cluster0.markers, "gene_id")
+
+### ILC versus other clusters 
+ilc.markers <- FindMarkers(seurat.12, ident.1 = c("ILC1", "ILC2", "ILC3"), min.pct = 0.25)
+ilc.markers <- ilc.markers %>% select(p_val, avg_log2FC)
+ilc.markers <- rownames_to_column(ilc.markers, "gene_id")
+
+### ILC subsets 
+ilc1.markers <- FindMarkers(seurat.12, ident.1 = "ILC1", min.pct = 0.25)
+ilc1.markers <- ilc1.markers %>% select(p_val, avg_log2FC)
+ilc1.markers <- rownames_to_column(ilc1.markers, "gene_id")
+
+ilc2.markers <- FindMarkers(seurat.12, ident.1 = "ILC2", min.pct = 0.25)
+ilc2.markers <- ilc2.markers %>% select(p_val, avg_log2FC)
+ilc2.markers <- rownames_to_column(ilc2.markers, "gene_id")
+
+ilc3.markers <- FindMarkers(seurat.12, ident.1 = "ILC3", min.pct = 0.25)
+ilc3.markers <- ilc3.markers %>% select(p_val, avg_log2FC)
+ilc3.markers <- rownames_to_column(ilc3.markers, "gene_id")
+
+## Differences by condition
+### All cluster matrix, by condition
+hu.12.markers <- FindMarkers(seurat.12, ident.1 = "healthy", ident.2 = "UC", verbose = FALSE)
+hu.12.markers <- hu.12.markers %>% select(p_val, avg_log2FC)
+hu.12.markers <- rownames_to_column(hu.12.markers, "gene_id")
+
+### ILC matrix by condition
+hu.ilc.markers <- FindMarkers(seurat.12.ilc, ident.1 = "healty", ident.2 = "UC",  min.pct = 0.25)
+hu.ilc.markers <- hu.ilc.markers %>% select(p_val, avg_log2FC)
+hu.ilc.markers <- rownames_to_column(hu.ilc.markers, "gene_id")
+
+### ILC subsets versus the same subset by condition 
 
 ```
 
-The APD3 metabolic pathway analysis sub-section is conducted externally, or a portion of the dataset imported and queried.
+```{r Querying against KEGG}
 
-```{r Querying against APD3}
+## GSE 150050
+im.15.path <- run_pathfindR(im.15.markers)
+im.cluster0.path <- run_pathfindR(im.cluster0.markers)
+im.ilc.path <- run_pathfindR(im.ilc.markers)
+im.ilc1.path <- run_pathfindR(im.ilc1.markers)
+im.ilc2.path <- run_pathfindR(im.ilc2.markers)
+im.ilc3.path <- run_pathfindR(im.ilc3.markers)
 
-# GSE 150050, four tissues
+## GSE 125527
+## Intestinal immune cells
+int.12.path <- run_pathfindR(int.12.markers)
+int.cluster0.path <- run_pathfindR(int.cluster0.markers)
+int.ilc.path <- run_pathfindR(int.ilc.markers)
+int.ilc1.path <- run_pathfindR(int.ilc1.markers)
+int.ilc2.path <- run_pathfindR(int.ilc2.markers)
+int.ilc3.path <- run_pathfindR(int.ilc3.markers)
 
-# GSE 185224, normal gut
+## PBMCs 
+pbmc.12.path <- run_pathfindR(pbmc.12.markers)
+cluster0.path <- run_pathfindR(cluster0.markers)
+ilc.path <- run_pathfindR(ilc.markers)
+ilc1.path <- run_pathfindR(ilc1.markers)
+ilc2.path <- run_pathfindR(ilc2.markers)
+ilc3.path <- run_pathfindR(ilc3.markers)
 
-# GSE 125527, IBD gut
-
+## PBMCs by condition
+hu.12.path <- run_pathfindR(hu.12.markers)
+hu.ilc.path <- run_pathfindR(hu.ilc.markers)
 
 ```
 
