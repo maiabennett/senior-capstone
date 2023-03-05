@@ -200,7 +200,7 @@ DimHeatmap(seurat.18, dims = 1, cells = 500, balanced = TRUE)
 DimHeatmap(seurat.18, dims = 1:15, cells = 500, balanced = TRUE)
 seurat.18 <- JackStraw(seurat.18, num.replicate = 100)
 seurat.18 <- ScoreJackStraw(seurat.18, dims = 1:20)
-png(file = "~/graphics/seurat18-jackstraw.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat18-jackstraw.png")
 JackStrawPlot(seurat.18, dims = 1:15)
 dev.off()
 
@@ -304,6 +304,10 @@ png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrativ
 JackStrawPlot(seurat.12, dims = 1:15)
 dev.off()
 
+## Save object for future recall
+saveRDS(seurat.12.healthy, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12healthy-preprocessed.rds")
+## Save object for future recall
+saveRDS(seurat.12.UC, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12UC-preprocessed.rds")
 ## Save object for future recall
 saveRDS(seurat.12, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-preprocessed.rds")
 
@@ -753,6 +757,9 @@ manual.curate.15 <- im.15.markers %>%
   slice_max(n = 10, order_by = avg_log2FC)
 im.15.markers <- im.15.markers %>% select(p_val, avg_log2FC)
 im.15.markers <- rownames_to_column(im.15.markers, "gene_id")
+# Replace 0s
+im.15.markers$p_val[im.15.markers$p_val=="0"]<-1.0e-302
+im.15.markers <- im.15.markers[c("gene_id", "avg_log2FC", "p_val")]
 
 ## Individual cluster matrices
 #im.cluster0.markers <- FindMarkers(seurat.15.int, ident.1 = 2, min.pct = 0.25)
@@ -765,17 +772,23 @@ im.ilc.markers <- im.ilc.markers %>% select(p_val, avg_log2FC)
 im.ilc.markers <- rownames_to_column(im.ilc.markers, "gene_id")
 
 ### ILC subsets versus each other matrices
-im.ilc1.markers <- FindMarkers(seurat.15.ilc, ident.1 = "ILC1", min.pct = 0.25)
+im.ilc1.markers <- FindMarkers(seurat.15.ilc, ident.1 = "ILC1", indent.2 = c("ILC2", "ILC3"), min.pct = 0.25)
 im.ilc1.markers <- im.ilc1.markers %>% select(p_val, avg_log2FC)
 im.ilc1.markers <- rownames_to_column(im.ilc1.markers, "gene_id")
+# Replace 0s
+im.ilc1.markers$p_val[im.ilc1.markers$p_val=="0"]<-1.0e-302
 
-im.ilc2.markers <- FindMarkers(seurat.15.ilc, ident.1 = "ILC2", min.pct = 0.25)
+im.ilc2.markers <- FindMarkers(seurat.15.ilc, ident.1 = "ILC2", indent.2 = c("ILC1", "ILC3"), min.pct = 0.25)
 im.ilc2.markers <- im.ilc2.markers %>% select(p_val, avg_log2FC)
 im.ilc2.markers <- rownames_to_column(im.ilc2.markers, "gene_id")
+# Replace 0s
+im.ilc2.markers$p_val[im.ilc2.markers$p_val=="0"]<-1.0e-302
 
-im.ilc3.markers <- FindMarkers(seurat.15.ilc, ident.1 = "ILC3", min.pct = 0.25)
+im.ilc3.markers <- FindMarkers(seurat.15.ilc, ident.1 = "ILC3", indent.2 = c("ILC1", "ILC2"), min.pct = 0.25)
 im.ilc3.markers <- im.ilc3.markers %>% select(p_val, avg_log2FC)
 im.ilc3.markers <- rownames_to_column(im.ilc3.markers, "gene_id")
+# Replace 0s
+im.ilc3.markers$p_val[im.ilc3.markers$p_val=="0"]<-1.0e-302
 
 # GSE 125527 
 ## Intestinal immune cells
@@ -861,8 +874,8 @@ hu.ilc.markers <- rownames_to_column(hu.ilc.markers, "gene_id")
 ```{r Querying against KEGG}
 
 ## GSE 150050
-im.15.path <- run_pathfindR(im.15.markers)
-im.cluster0.path <- run_pathfindR(im.cluster0.markers)
+#im.15.path <- run_pathfindR(im.15.markers)
+#im.cluster0.path <- run_pathfindR(im.cluster0.markers)
 im.ilc.path <- run_pathfindR(im.ilc.markers)
 im.ilc1.path <- run_pathfindR(im.ilc1.markers)
 im.ilc2.path <- run_pathfindR(im.ilc2.markers)
