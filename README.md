@@ -9,6 +9,6 @@ This is the repository for Maia Bennett's Senior Capstone in Bioinformatics (BS)
 
 ## General overview of the analysis
 
-![analysis_overview](https://user-images.githubusercontent.com/123126475/224148583-526a18f9-3fdb-48bd-8240-f6d4a9b6716f.svg)
+![analysis_overview](https://user-images.githubusercontent.com/123126475/224149175-ea4f4153-388d-487d-837a-9002179dcaf0.png)
 
 ## Tools, installation, and packages
