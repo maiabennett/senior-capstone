@@ -21,6 +21,9 @@ library(sqldf)
 library(dplyr)
 library(ggplot2)
 library(cowplot)
+library(radiant.data)
+library(org.Hs.eg.db)
+library(textshape)
 
 ```
 
@@ -82,8 +85,8 @@ seurat.12.int <- CreateSeuratObject(counts = counts.12.int)
 
 
 ## PBMC counts data from directory and append
-dir.12.healthy <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyPBMC/"
-dir.12.UC <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UCPBMC/"
+dir.12.healthy <- "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyPBMC/"
+dir.12.UC <- "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UCPBMC/"
 files.12.pbmc.healthy <- list.files(path = dir.12.healthy, pattern = ".tsv.gz", full.names = TRUE)
 files.12.pbmc.UC <- list.files(path = dir.12.UC, pattern = ".tsv.gz", full.names = TRUE)
 
@@ -110,10 +113,19 @@ counts.12.pbmc.UC <- t(counts.12.UC)
 ### Make metadata for later analysis
 metadata.12.UC <- data.frame(x1= colnames(counts.12.pbmc.UC), x2 = "UC")
 colnames(metadata.12.UC) <- c("barcode", "condition")
+metadata.12.UC <- column_to_rownames(metadata.12.UC, loc = 1)
 
 ## Seurat objects creation
 seurat.12.healthy <- CreateSeuratObject(counts = counts.12.pbmc.healthy, metadata = metadata.12.healthy)
 seurat.12.UC <- CreateSeuratObject(counts = counts.12.pbmc.UC, metadata = metadata.12.UC)
+
+## Create combined object
+counts.12 <- rbind(t(counts.12.pbmc.healthy), t(counts.12.pbmc.UC))
+counts.12 <- t(counts.12)
+metadata.12 <- rbind(metadata.12.healthy, metadata.12.UC)
+metadata.12 <- column_to_rownames(metadata.12, loc = 1)
+seurat.12 <- CreateSeuratObject(counts = counts.12)
+seurat.12 <- AddMetaData(seurat.12, metadata.12, col.name = "condition")
 
 ```
 
@@ -138,7 +150,7 @@ top10 <- head(VariableFeatures(seurat.15), 10)
 ### Plot variable features with and without labels
 plot1 <- VariableFeaturePlot(seurat.15)
 plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat15-varfeatures.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat15-varfeatures.png", width= 900, height=480)
 plot1
 plot2
 dev.off()
@@ -155,7 +167,7 @@ DimHeatmap(seurat.15, dims = 1, cells = 500, balanced = TRUE)
 DimHeatmap(seurat.15, dims = 1:15, cells = 500, balanced = TRUE)
 seurat.15 <- JackStraw(seurat.15, num.replicate = 100)
 seurat.15 <- ScoreJackStraw(seurat.15, dims = 1:20)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat15-jackstraw.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat15-jackstraw.png", width= 700, height=480)
 JackStrawPlot(seurat.15, dims = 1:15)
 dev.off()
 
@@ -184,7 +196,7 @@ top10 <- head(VariableFeatures(seurat.18), 10)
 ### Plot variable features with and without labels
 plot3 <- VariableFeaturePlot(seurat.18)
 plot4 <- LabelPoints(plot = plot3, points = top10, repel = TRUE)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat18-varfeatures.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat18-varfeatures.png", width= 900, height=480)
 plot3 + plot4
 dev.off()
 
@@ -200,7 +212,7 @@ DimHeatmap(seurat.18, dims = 1, cells = 500, balanced = TRUE)
 DimHeatmap(seurat.18, dims = 1:15, cells = 500, balanced = TRUE)
 seurat.18 <- JackStraw(seurat.18, num.replicate = 100)
 seurat.18 <- ScoreJackStraw(seurat.18, dims = 1:20)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat18-jackstraw.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat18-jackstraw.png", width= 700, height=480)
 JackStrawPlot(seurat.18, dims = 1:15)
 dev.off()
 
@@ -230,7 +242,7 @@ top10 <- head(VariableFeatures(seurat.12.int), 10)
 ### Plot variable features with and without labels
 plot1 <- VariableFeaturePlot(seurat.12.int)
 plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12int-varfeatures.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12int-varfeatures.png", width= 900, height=480)
 plot1 + plot2
 dev.off()
 
@@ -246,7 +258,7 @@ DimHeatmap(seurat.12.int, dims = 1, cells = 500, balanced = TRUE)
 DimHeatmap(seurat.12.int, dims = 1:15, cells = 500, balanced = TRUE)
 seurat.12.int <- JackStraw(seurat.12.int, num.replicate = 100)
 seurat.12.int <- ScoreJackStraw(seurat.12.int, dims = 1:20)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12int-jackstraw.png")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12int-jackstraw.png", width= 700, height=480)
 JackStrawPlot(seurat.12.int, dims = 1:15)
 dev.off()
 
@@ -271,20 +283,29 @@ seurat.12.UC <- NormalizeData(seurat.12.UC)
 seurat.12.healthy <- FindVariableFeatures(seurat.12.healthy, selection.method = "vst", nfeatures = 2000)
 seurat.12.UC <- FindVariableFeatures(seurat.12.UC, selection.method = "vst", nfeatures = 2000)
 
+top10 <- head(VariableFeatures(seurat.12.healthy), 10)
+top10 <- head(VariableFeatures(seurat.12.UC), 10)
+
 ### Plot individual variable features with and without labels
 print(plot5 <- VariableFeaturePlot(seurat.12.healthy))
 print(plot6 <- LabelPoints(plot = plot5, points = top10, repel = TRUE))
 print(plot7 <- VariableFeaturePlot(seurat.12.UC))
 print(plot8 <- LabelPoints(plot = plot7, points = top10, repel = TRUE))
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/12healthy-varfeatures.png")
+png(file = "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/12healthy-varfeatures.png", width= 900, height=480)
 plot5 + plot6
 dev.off()
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12UC-varfeatures.png")
+png(file = "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12UC-varfeatures.png", width= 900, height=480)
 plot7 + plot8
 dev.off()
 
+### Normalize and identify variable features in combined Seurat object
+seurat.12.list <- SplitObject(seurat.12, split.by = "condition")
+seurat.12.list <- lapply(X = seurat.12.list, FUN = function(x) {
+  x <- NormalizeData(x)
+  x <- FindVariableFeatures(x, selection.method = "vst", nfeatures=2000)
+})
+
 ### Select features that are repeatedly variable across datasets for integration
-seurat.12.list <- list(seurat.12.healthy, seurat.12.UC)
 seurat.12.features <- SelectIntegrationFeatures(object.list = seurat.12.list)
 seurat.12.anchors <- FindIntegrationAnchors(object.list = seurat.12.list, anchor.features = seurat.12.features)
 
@@ -300,16 +321,24 @@ DimHeatmap(seurat.12, dims = 1, cells = 500, balanced = TRUE)
 DimHeatmap(seurat.12, dims = 1:15, cells = 500, balanced = TRUE)
 seurat.12 <- JackStraw(seurat.12, num.replicate = 100)
 seurat.12 <- ScoreJackStraw(seurat.12, dims = 1:20)
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-jackstraw.png")
+png(file = "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-jackstraw.png", width= 700, height=480)
 JackStrawPlot(seurat.12, dims = 1:15)
 dev.off()
 
+seurat.12.healthy <- ScaleData(seurat.12.healthy, verbose = FALSE)
+seurat.12.healthy <- RunPCA(seurat.12.healthy, npcs = 30, verbose = FALSE)
+print(seurat.12.healthy[["pca"]], dims = 1:5, nfeatures = 5)
+
+seurat.12.UC <- ScaleData(seurat.12.UC, verbose = FALSE)
+seurat.12.UC <- RunPCA(seurat.12.UC, npcs = 30, verbose = FALSE)
+print(seurat.12.UC[["pca"]], dims = 1:5, nfeatures = 5)
+
 ## Save object for future recall
-saveRDS(seurat.12.healthy, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12healthy-preprocessed.rds")
+saveRDS(seurat.12.healthy, file = "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12healthy-preprocessed.rds")
 ## Save object for future recall
-saveRDS(seurat.12.UC, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12UC-preprocessed.rds")
+saveRDS(seurat.12.UC, file = "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12UC-preprocessed.rds")
 ## Save object for future recall
-saveRDS(seurat.12, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-preprocessed.rds")
+saveRDS(seurat.12, file = "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-preprocessed.rds")
 
 ```
 
@@ -686,8 +715,10 @@ head(Idents(seurat.12), 5)
 
 ## Run non-linear dimensional reduction (UMAP/tSNE)
 seurat.12 <- RunUMAP(seurat.12, dims = 1:10)
-DimPlot(seurat.12, reduction = "umap", label = TRUE)
 png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-initialUMAP.png")
+DimPlot(seurat.12, reduction = "umap", label = TRUE)
+dev.off()
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-initialUMAPcond.png")
 p1 <- DimPlot(seurat.12, reduction = "umap", group.by = "condition")
 dev.off()
 
@@ -706,7 +737,7 @@ write.table(manual.curate.12, file="manual.curate.12.txt", row.names=TRUE, col.n
 ### NKs: CD56/NCAM1+, EOMES+
 ### Ts: CD3/CD3D+ (definite)
 png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-initialmarkers.png")
-FeaturePlot(seurat.12, features = c("CD3A", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3"), min.cutoff = "q9")
+FeaturePlot(seurat.12, features = c("CD3D", "CD8A", "CD14", "CD19", "NCAM1", "EOMES", "IL7R",  "KLRB1", "GATA3", "ID2", "IL23R", "TBX21"), min.cutoff = "q9")
 dev.off()
 
 ## Assign identity to clusters
@@ -717,22 +748,30 @@ png(file = "~/graphics/seurat12-labeledUMAP.png")
 DimPlot(seurat.12, reduction = "umap", label = TRUE, pt.size = 0.5) + NoLegend()
 dev.off()
 
-## Visualize specific markers by condition and cell type
+## Visualize specific immune markers by condition and cell type
 Idents(seurat.12) <- factor(Idents(seurat.12), levels = c(""))
 markers.to.plot <- c("CD3A", "NCAM1", "EOMES", "IL7R", "PTGDR2", "KIT", "KLRB1", "GATA3")
-png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-dotplot.png")
-DotPlot(seurat.12, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "stim") +
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-immdotplot.png")
+DotPlot(seurat.12, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "condition") +
   RotatedAxis()
 dev.off()
 
-## Visualize specific genes in cowplot format by condition and cell type
+## Visualize specific microbiome interaction genes by condition and cell type
+#Idents(seurat.12) <- factor(Idents(seurat.12), levels = c(""))
+markers.to.plot <- c("NOD2", "CARD9", "ATG16L1", "IRGM")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-microdotplot.png")
+DotPlot(seurat.12, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8, split.by = "condition") +
+  RotatedAxis()
+dev.off()
+
+## Visualize specific microbiome interaction genes in cowplot format by condition and cell type
 theme_set(theme_cowplot())
 ilcs <- subset(seurat.12, idents = c("ILC1", "ILC2", "ILC3"))
 Idents(ilcs) <- "condition"
 avg.ilcs <- as.data.frame(log1p(AverageExpression(ilcs, verbose = FALSE)$RNA))
 avg.ilcs$gene <- rownames(avg.ilcs)
 
-genes.to.label = c("") # Add metabolic-related genes?
+genes.to.label = c("NOD2", "CARD9", "ATG16L1", "IRGM") 
 p9 <- ggplot(avg.ilcs, aes(healthy, UC)) + geom_point() + ggtitle("ILCs")
 p9 <- LabelPoints(plot = p9, points = genes.to.label, repel = TRUE)
 png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12-diffgenes.png")
@@ -760,11 +799,6 @@ im.15.markers <- rownames_to_column(im.15.markers, "gene_id")
 # Replace 0s
 im.15.markers$p_val[im.15.markers$p_val=="0"]<-1.0e-302
 im.15.markers <- im.15.markers[c("gene_id", "avg_log2FC", "p_val")]
-
-## Individual cluster matrices
-#im.cluster0.markers <- FindMarkers(seurat.15.int, ident.1 = 2, min.pct = 0.25)
-#im.cluster0.markers <- im.cluster0.markers %>% select(p_val, avg_log2FC)
-#im.cluster0.markers <- rownames_to_column(im.cluster0.markers, "gene_id")
 
 ### ILC versus other clusters matrix
 im.ilc.markers <- FindMarkers(seurat.15.ilc, ident.1 = c("ILC1", "ILC2", "ILC3"), min.pct = 0.25)
@@ -799,29 +833,15 @@ manual.curate.12.int <- seurat.12.int.markers %>%
   slice_max(n = 10, order_by = avg_log2FC)
 int.12.markers <- int.12.markers %>% select(p_val, avg_log2FC)
 int.12.markers <- rownames_to_column(int.12.markers, "gene_id")
-
-## Individual cluster matrices
-int.cluster0.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = 2, min.pct = 0.25)
-int.cluster0.markers <- int.cluster0.markers %>% select(p_val, avg_log2FC)
-int.cluster0.markers <- rownames_to_column(int.cluster0.markers, "gene_id")
+# Replace 0s
+int.12.markers$p_val[int.12.markers$p_val=="0"]<-1.0e-302
 
 ### ILC versus other clusters matrix
-int.ilc.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = c("ILC1", "ILC2", "ILC3"), min.pct = 0.25)
+int.ilc.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "Contains ILCs", min.pct = 0.25)
 int.ilc.markers <- int.ilc.markers %>% select(p_val, avg_log2FC)
 int.ilc.markers <- rownames_to_column(int.ilc.markers, "gene_id")
-
-### ILC subsets versus each other matrices
-int.ilc1.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC1", min.pct = 0.25)
-int.ilc1.markers <- int.ilc1.markers %>% select(p_val, avg_log2FC)
-int.ilc1.markers <- rownames_to_column(int.ilc1.markers, "gene_id")
-
-int.ilc2.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC2", min.pct = 0.25)
-int.ilc2.markers <- int.ilc2.markers %>% select(p_val, avg_log2FC)
-int.ilc2.markers <- rownames_to_column(int.ilc2.markers, "gene_id")
-
-int.ilc3.markers <- FindMarkers(seurat.12.int.ilc, ident.1 = "ILC3", min.pct = 0.25)
-int.ilc3.markers <- int.ilc3.markers %>% select(p_val, avg_log2FC)
-int.ilc3.markers <- rownames_to_column(int.ilc3.markers, "gene_id")
+# Replace 0s
+int.ilc.markers$p_val[int.ilc.markers$p_val=="0"]<-1.0e-302
 
 
 # PBMCs
@@ -832,11 +852,6 @@ manual.curate.12 <- seurat.12.markers %>%
   slice_max(n = 10, order_by = avg_log2FC)
 pbmc.12.markers <- pbmc.12.markers %>% select(p_val, avg_log2FC)
 pbmc.12.markers <- rownames_to_column(pbmc.12.markers, "gene_id")
-
-## Individual cluster 
-cluster0.markers <- FindMarkers(seurat.12, ident.1 = 2, min.pct = 0.25)
-cluster0.markers <- cluster0.markers %>% select(p_val, avg_log2FC)
-cluster0.markers <- rownames_to_column(cluster0.markers, "gene_id")
 
 ### ILC versus other clusters 
 ilc.markers <- FindMarkers(seurat.12, ident.1 = c("ILC1", "ILC2", "ILC3"), min.pct = 0.25)
@@ -874,25 +889,19 @@ hu.ilc.markers <- rownames_to_column(hu.ilc.markers, "gene_id")
 ```{r Querying against KEGG}
 
 ## GSE 150050
-#im.15.path <- run_pathfindR(im.15.markers)
-#im.cluster0.path <- run_pathfindR(im.cluster0.markers)
-im.ilc.path <- run_pathfindR(im.ilc.markers)
-im.ilc1.path <- run_pathfindR(im.ilc1.markers)
-im.ilc2.path <- run_pathfindR(im.ilc2.markers)
-im.ilc3.path <- run_pathfindR(im.ilc3.markers)
+im.15.path <- run_pathfindR(im.15.markers, output_dir = "~/pathfindR/seurat15_all")
+im.ilc.path <- run_pathfindR(im.ilc.markers, output_dir = "~/pathfindR/seurat15_ilc")
+im.ilc1.path <- run_pathfindR(im.ilc1.markers, output_dir = "~/pathfindR/seurat15_ilc1")
+im.ilc2.path <- run_pathfindR(im.ilc2.markers, output_dir = "~/pathfindR/seurat15_ilc2")
+im.ilc3.path <- run_pathfindR(im.ilc3.markers, output_dir = "~/pathfindR/seurat15_ilc2")
 
 ## GSE 125527
 ## Intestinal immune cells
-int.12.path <- run_pathfindR(int.12.markers)
-int.cluster0.path <- run_pathfindR(int.cluster0.markers)
-int.ilc.path <- run_pathfindR(int.ilc.markers)
-int.ilc1.path <- run_pathfindR(int.ilc1.markers)
-int.ilc2.path <- run_pathfindR(int.ilc2.markers)
-int.ilc3.path <- run_pathfindR(int.ilc3.markers)
+int.12.path <- run_pathfindR(int.12.markers, output_dir = "~/pathfindR/seurat12int_all")
+int.ilc.path <- run_pathfindR(int.ilc.markers, output_dir = "~/pathfindR/seurat12int_ilc")
 
 ## PBMCs 
 pbmc.12.path <- run_pathfindR(pbmc.12.markers)
-cluster0.path <- run_pathfindR(cluster0.markers)
 ilc.path <- run_pathfindR(ilc.markers)
 ilc1.path <- run_pathfindR(ilc1.markers)
 ilc2.path <- run_pathfindR(ilc2.markers)
