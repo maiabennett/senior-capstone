@@ -11,6 +11,6 @@ Literature strongly suggests connections and interactions between ILCs and micro
 
 ## General overview of the analysis
 
-![analysis_overview](https://user-images.githubusercontent.com/123126475/224152233-af48b421-3012-4678-b371-59a67e6af154.png)
+![analysis_overview](https://user-images.githubusercontent.com/123126475/224430310-23f795ad-d8f3-4f2f-b57a-d3531b1ed38e.png)
 
 ## Tools, installation, and packages
