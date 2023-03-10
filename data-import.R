@@ -39,10 +39,10 @@ counts.12.int <- t(counts.12.int)
 ## Seurat objects creation
 seurat.12.int <- CreateSeuratObject(counts = counts.12.int)
 
-# PBMCs by condition
-## Set up variables
-dir.12.healthy <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyPBMC/"
-dir.12.UC <- "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UCPBMC/"
+
+## PBMC counts data from directory and append
+dir.12.healthy <- "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/HealthyPBMC/"
+dir.12.UC <- "C:/Users/maiabennett/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/Data/GSE125527/UMI/UCPBMC/"
 files.12.pbmc.healthy <- list.files(path = dir.12.healthy, pattern = ".tsv.gz", full.names = TRUE)
 files.12.pbmc.UC <- list.files(path = dir.12.UC, pattern = ".tsv.gz", full.names = TRUE)
 
@@ -69,7 +69,16 @@ counts.12.pbmc.UC <- t(counts.12.UC)
 ### Make metadata for later analysis
 metadata.12.UC <- data.frame(x1= colnames(counts.12.pbmc.UC), x2 = "UC")
 colnames(metadata.12.UC) <- c("barcode", "condition")
+metadata.12.UC <- column_to_rownames(metadata.12.UC, loc = 1)
 
 ## Seurat objects creation
 seurat.12.healthy <- CreateSeuratObject(counts = counts.12.pbmc.healthy, metadata = metadata.12.healthy)
 seurat.12.UC <- CreateSeuratObject(counts = counts.12.pbmc.UC, metadata = metadata.12.UC)
+
+## Create combined object
+counts.12 <- rbind(t(counts.12.pbmc.healthy), t(counts.12.pbmc.UC))
+counts.12 <- t(counts.12)
+metadata.12 <- rbind(metadata.12.healthy, metadata.12.UC)
+metadata.12 <- column_to_rownames(metadata.12, loc = 1)
+seurat.12 <- CreateSeuratObject(counts = counts.12)
+seurat.12 <- AddMetaData(seurat.12, metadata.12, col.name = "condition")
