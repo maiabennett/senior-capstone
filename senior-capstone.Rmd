@@ -692,9 +692,23 @@ saveRDS(seurat.12.int.ilc, file = "C:/Users/Me/OneDrive - University of Nebraska
 
 ```
 
-This section contains code for composition analysis of phenotypes between datasets (graphics, comparisons, etc).
+This section contains code for composition analysis of expression in datasets (graphics, comparisons, etc).
 
 ```{r Comparing phenotype composition}
+
+## Visualize specific microbiome interaction genes by condition and cell type
+markers.to.plot <- c("NOD2", "CARD9", "ATG16L1*", "IRGM")
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat15-microdotplot.png")
+DotPlot(seurat.15.ilc, features = markers.to.plot, cols = c("blue", "red"), dot.scale = 8) +
+  RotatedAxis()
+dev.off()
+
+seurat.15.ilc$celltype <- Idents(seurat.15.ilc)
+plots <- VlnPlot(seurat.12.inter, features = c("NOD2", "CARD9", "ATG16L1", "IRGM"), group.by = "celltype",
+    pt.size = 0, combine = FALSE, y.max = 2)
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat15ilc-vinmicrogenes.png")
+wrap_plots(plots = plots, ncol = 1)
+dev.off()
 
 ```
 
@@ -859,6 +873,13 @@ DotPlot(seurat.12.inter, features = markers.to.plot, cols = c("blue", "red"), do
   RotatedAxis()
 dev.off()
 
+seurat.12.inter$celltype <- Idents(seurat.12.inter)
+plots <- VlnPlot(seurat.12.inter, features = c("NOD2", "CARD9", "ATG16L1", "IRGM"), split.by = "condition", group.by = "celltype",
+    pt.size = 0, combine = FALSE)
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12inter-vinmicrogenes.png")
+wrap_plots(plots = plots, ncol = 1)
+dev.off()
+
 ## Visualize specific microbiome interaction genes in cowplot format by condition and cell type
 ## All cells
 theme_set(theme_cowplot())
@@ -884,6 +905,8 @@ p9 <- LabelPoints(plot = p9, points = genes.to.label, repel = TRUE)
 png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12ilc-diffmicrogenes.png")
 p9
 dev.off()
+
+
 
 ## Save objects for future recall
 saveRDS(seurat.12, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-clustered.rds")
