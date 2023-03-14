@@ -18,3 +18,4 @@ inter.ilc.path <- run_pathfindR(inter.ilc.markers, output_dir = "~/pathfindR/seu
 ## PBMCs by condition
 hu.12.path <- run_pathfindR(hu.12.markers, output_dir = "~/pathfindR/seurat12_conditions")
 hu.ilc.path <- run_pathfindR(hu.ilc.markers, output_dir = "~/pathfindR/seurat12_ilc_conditions")
+
