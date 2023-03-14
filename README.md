@@ -7,7 +7,7 @@ Literature strongly suggests connections and interactions between ILCs and micro
 ## The main goal of this project is to identify potential ILC-microbiome cross-regulation.
 - The first aim of this project is to quantify the phenotypic composition of ILCs across three public human scRNA-seq datasets using Seurat (v4).
 - The second aim of this project is to investigate phenotypic differences between ILCs in humans with normal and dysregulated (ulcerative colitis; UC) gut conditions using Seurat (v4).
-- The third aim of this project is to establish potential involvement of ILCs in microbiome regulation using pathfindR.
+- The third aim of this project is to establish potential involvement of ILCs in microbial processes using pathfindR to query KEGG and GO-BP gene sets.
 
 ## General overview of the analysis
 
