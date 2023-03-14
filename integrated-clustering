@@ -1,3 +1,5 @@
+# GSE 125527
+# PBMCs by condition
 
 ## Cluster the cells
 seurat.12 <- FindNeighbors(seurat.12, dims = 1:10)
@@ -152,6 +154,13 @@ DotPlot(seurat.12.inter, features = markers.to.plot, cols = c("blue", "red"), do
   RotatedAxis()
 dev.off()
 
+seurat.12.inter$celltype <- Idents(seurat.12.inter)
+plots <- VlnPlot(seurat.12.inter, features = c("NOD2", "CARD9", "ATG16L1", "IRGM"), split.by = "condition", group.by = "celltype",
+    pt.size = 0, combine = FALSE)
+png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12inter-vinmicrogenes.png")
+wrap_plots(plots = plots, ncol = 1)
+dev.off()
+
 ## Visualize specific microbiome interaction genes in cowplot format by condition and cell type
 ## All cells
 theme_set(theme_cowplot())
@@ -177,6 +186,8 @@ p9 <- LabelPoints(plot = p9, points = genes.to.label, repel = TRUE)
 png(file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/graphics/seurat12ilc-diffmicrogenes.png")
 p9
 dev.off()
+
+
 
 ## Save objects for future recall
 saveRDS(seurat.12, file = "C:/Users/Me/OneDrive - University of Nebraska at Omaha/Administrative/Documents/Senior Project/senior-capstone/rds/seurat12-clustered.rds")
