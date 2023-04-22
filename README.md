@@ -15,3 +15,6 @@ Literature strongly suggests connections and interactions between ILCs and micro
 
 ## Implementation
 This GitHub includes all code used to generate the final results of the indicated senior capstone project. The order of all indicidual code components, as well as their contents and general descriptions of code utilization, can be found in [this R markdown file](https://github.com/maiabennett/senior-capstone/blob/main/senior-capstone.Rmd). Seurat objects were saved at each point of analysis (pre-processing and each iteration of clustering/annotation) to increase the reproducibility of this project without necessitating computationally heavy processes. These RDS files may be obtained by contacting Maia Bennett (maiabennett@unomaha.edu) and can be imported into R for analysis using the steps detailed [in this R script](https://github.com/maiabennett/senior-capstone/blob/main/readRDS.R). Any extraneous questions on implementation and use can also be directed to Maia Bennett at the above email. 
+
+## License
+This repository uses the MIT License. 
